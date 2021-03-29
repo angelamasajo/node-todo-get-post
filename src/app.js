@@ -32,8 +32,34 @@ const serializeTodo = todo => ({
 
 app
   .route('/v1/todos')
-  .get(/* Your code here */)
-  .post(/* Your code here */)
+  .get((req, res, next) => {
+    const knexInstance = req.app.get('db')
+    TodoService.getTodos(knexInstance)
+      .then((todos) => {
+        res.json(todos)
+      })
+      .catch(next)
+  })
+  .post((req, res, next) => {
+    const { title, completed = false } = req.body
+    const newTodo = { title }
+
+    for (const [key, value] of Object.entries(newTodo))
+      if (value == null)
+        return res
+          .status(400)
+          .json({ error: { message: `Missing '${key}' in req body` }})
+    
+    newTodo.completed = completed
+
+    TodoService.insertTodo(req.app.get('db'), newTodo)
+      .then((todo) => {
+        res.status(201)
+          .location(path.posix.join(req.originalUrl, `/${todo.id}`))
+          .json(serializeTodo(todo))
+      })
+      .catch(next)
+  })
 
 app
   .route('/v1/todos/:todo_id')
